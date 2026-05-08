@@ -14,11 +14,15 @@ GavinJamesAudioProcessorEditor::GavinJamesAudioProcessorEditor (GavinJamesAudioP
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
  
+
+    
     auto& params = audioProcessor.getParameters();
     juce::AudioParameterFloat* gainParameter = (juce::AudioParameterFloat*)params.getUnchecked(0);
     
     mGainControlSlider.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
     mGainControlSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    mGainControlSlider.setRange(gainParameter->range.start, gainParameter->range.end);
+    mGainControlSlider.setValue(*gainParameter);
     addAndMakeVisible(mGainControlSlider);
 
     mGainControlSlider.onDragStart = [gainParameter] {

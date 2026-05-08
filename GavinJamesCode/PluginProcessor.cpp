@@ -148,7 +148,6 @@ void GavinJamesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
 {
     
     
-    
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -179,6 +178,8 @@ void GavinJamesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
                 channelRight[sample] *= mGainSmoothed;
             }
 
+    DBG("gain value is:" + juce::String(mGainParameter->get()));
+    
 }
 
 //==============================================================================
