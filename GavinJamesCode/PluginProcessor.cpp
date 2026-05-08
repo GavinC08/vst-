@@ -26,15 +26,16 @@ GavinJamesAudioProcessor::GavinJamesAudioProcessor()
     {"gain", 1},
     "Gain",
     0,
-    1.0,
-    0.5
+    1.0f,
+    0.5f
     ));
-
     // {"gain", 1}: param id and version number
     // "Gain": param name
     // 0: min value
     // 1.0: max value
     // 0.5: default value
+   
+
 
 }
 
@@ -147,6 +148,7 @@ void GavinJamesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
 {
     
     
+    
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -166,17 +168,17 @@ void GavinJamesAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    
+    float* channelLeft = buffer.getWritePointer(0);
+    float* channelRight = buffer.getWritePointer(1);
 
-        // ..do something to the data...
-        for (int sample = 0; sample < buffer.getNumSamples(); sample++)
-                {
-                    channelData[sample] *= 0.1;
-                    channelData[sample] *= mGainParameter->get();
-                }
-    }
+    for (int sample = 0; sample < buffer.getNumSamples(); sample++)
+            {
+                mGainSmoothed = mGainSmoothed - 0.004 * (mGainSmoothed - mGainParameter->get());
+                channelLeft[sample] *= mGainSmoothed;
+                channelRight[sample] *= mGainSmoothed;
+            }
+
 }
 
 //==============================================================================
