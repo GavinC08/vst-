@@ -189,8 +189,7 @@ bool GavinJamesAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* GavinJamesAudioProcessor::createEditor()
 {
-    //return new GavinJamesAudioProcessorEditor (*this);
-    return nullptr;
+    return new GavinJamesAudioProcessorEditor (*this);
 }
 
 //==============================================================================
