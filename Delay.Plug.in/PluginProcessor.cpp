@@ -26,6 +26,8 @@ DelayPlug_inAudioProcessor::DelayPlug_inAudioProcessor()
     mCircularBufferRight = nullptr;
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = 0;
+    mDelayTimeInSamples = 0;
+    mCircularBufferReadHead = 0;
 }
 
 
@@ -110,6 +112,7 @@ void DelayPlug_inAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 {
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
+    mDelayTimeInSamples = sampleRate * 0.5;
 
     // Use this method as the place to do any pre-playback
         // initialisation that you need..
@@ -172,12 +175,20 @@ void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i];
             
+            mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
+            
             mCircularBufferWriteHead++;
             
             if (mCircularBufferWriteHead >= mCircularBufferLength) {
                 mCircularBufferWriteHead = 0;
             }
+            
+            mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
+                    if (mCircularBufferReadHead < 0) {
+                        mCircularBufferReadHead += mCircularBufferLength;
+                    }
         }
+    
    
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
