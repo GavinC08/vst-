@@ -187,6 +187,10 @@ void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     if (mCircularBufferReadHead < 0) {
                         mCircularBufferReadHead += mCircularBufferLength;
                     }
+            
+            buffer.addSample(0, i, mCircularBufferLeft[(int)mCircularBufferReadHead]);
+                    buffer.addSample(1, i, mCircularBufferRight[(int)mCircularBufferReadHead]);
+
         }
     
    
