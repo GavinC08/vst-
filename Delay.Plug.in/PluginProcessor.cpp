@@ -24,6 +24,8 @@ DelayPlug_inAudioProcessor::DelayPlug_inAudioProcessor()
 {
     mCircularBufferLeft = nullptr;
     mCircularBufferRight = nullptr;
+    mCircularBufferWriteHead = 0;
+    mCircularBufferLength = 0;
 }
 
 
@@ -106,6 +108,9 @@ void DelayPlug_inAudioProcessor::changeProgramName (int index, const juce::Strin
 //==============================================================================
 void DelayPlug_inAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    mCircularBufferWriteHead = 0;
+    mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
+
     // Use this method as the place to do any pre-playback
         // initialisation that you need..
     if (mCircularBufferLeft == nullptr) {
@@ -152,10 +157,28 @@ bool DelayPlug_inAudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 
 void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+            buffer.clear (i, 0, buffer.getNumSamples());
+   
+    float* leftChannel = buffer.getWritePointer(0);
+    float* rightChannel = buffer.getWritePointer(1);
+
+        for (int i = 0; i < buffer.getNumSamples(); i++) {
+            mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
+            mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i];
+            
+            mCircularBufferWriteHead++;
+            
+            if (mCircularBufferWriteHead >= mCircularBufferLength) {
+                mCircularBufferWriteHead = 0;
+            }
+        }
+   
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
     // guaranteed to be empty - they may contain garbage).
