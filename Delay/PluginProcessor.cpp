@@ -31,8 +31,13 @@ DelayAudioProcessor::DelayAudioProcessor()
     mFeedbackLeft = 0;
     mFeedbackRight = 0;
     //All of these are initial values to reset the circular buffer before running.
-    mDryWet = 0.5;
-    //This sets the amount of unprocessed to processsed signal as equal as default
+
+    
+    addParameter(mDryWetParameter = new juce::AudioParameterFloat({"drywet", 1}, "Dry Wet", 0, 1.0, 0.5));
+    addParameter(mFeedbackParameter = new juce::AudioParameterFloat({"feedback", 1}, "Feedback", 0, 0.98, 0.5));
+    addParameter(mDelayTimeParameter = new juce::AudioParameterFloat({"delaytime", 1}, "Delay Time", 0.01, MAX_DELAY_TIME, 0.5));
+    //parameters for our new pointers.
+    
 }
 
 
@@ -117,7 +122,6 @@ void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
-    mDelayTimeInSamples = sampleRate * 0.5;
 
     // Use this method as the place to do any pre-playback
         // initialisation that you need..
@@ -166,6 +170,9 @@ bool DelayAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
 
+    mDelayTimeInSamples = getSampleRate() * *mDelayTimeParameter;
+    //this is the delay time parameter values. It's been moved here from prepare to play is it could change at any time.
+    
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
@@ -177,6 +184,8 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     float* rightChannel = buffer.getWritePointer(1);
 
         for (int i = 0; i < buffer.getNumSamples(); i++) {
+
+            
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i] + mFeedbackLeft;
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i] + mFeedbackRight;
 // + mFeedbackLeft and + mFeedbackRight add the feedback values directly to the circular buffer
@@ -197,13 +206,13 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
             float delay_sample_left = mCircularBufferLeft[(int)mCircularBufferReadHead];
             float delay_sample_right = mCircularBufferRight[(int)mCircularBufferReadHead];
 
-            mFeedbackLeft = delay_sample_left * 0.8;
-            mFeedbackRight = delay_sample_right * 0.8;
-            //This turns down the delayed sample before storing. (Make the scalar bigger or smaller to turn it up or down)
+            mFeedbackLeft = delay_sample_left * *mFeedbackParameter;
+            mFeedbackRight = delay_sample_right * *mFeedbackParameter;
+            //This changes the hard coded values to our feedback parameter instead. 
             
-            buffer.setSample(0, i, buffer.getSample(0, i) * (1 - mDryWet) + delay_sample_left * mDryWet);
-            buffer.setSample(1, i, buffer.getSample(1, i) * (1 - mDryWet) + delay_sample_right * mDryWet);
-            
+            buffer.setSample(0, i, buffer.getSample(0, i) * *mDryWetParameter + delay_sample_left * (1 - *mDryWetParameter));
+            buffer.setSample(1, i, buffer.getSample(1, i) * *mDryWetParameter + delay_sample_right * (1 - *mDryWetParameter));
+
 //This section of code now allows us to control the amout of buffer sample involved. For example if mDrtWet if set to 1, you get 100% processed sound. (1-1) = 0.
             
         }

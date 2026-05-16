@@ -69,5 +69,8 @@ private:
     float mFeedbackRight;
     //left and right feedback scalars.
     
-    float mDryWet;
+    juce::AudioParameterFloat* mDryWetParameter;
+    juce::AudioParameterFloat* mFeedbackParameter;
+    juce::AudioParameterFloat* mDelayTimeParameter;
+    //float pointers for knob values 
 };
