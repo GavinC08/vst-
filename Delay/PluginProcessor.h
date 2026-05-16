@@ -72,5 +72,5 @@ private:
     juce::AudioParameterFloat* mDryWetParameter;
     juce::AudioParameterFloat* mFeedbackParameter;
     juce::AudioParameterFloat* mDelayTimeParameter;
-    //float pointers for knob values 
+    //float pointers for knob values
 };

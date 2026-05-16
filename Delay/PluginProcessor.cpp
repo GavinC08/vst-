@@ -20,6 +20,7 @@ DelayAudioProcessor::DelayAudioProcessor()
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
                        )
+
 #endif
 {
     mCircularBufferLeft = nullptr;
@@ -31,12 +32,12 @@ DelayAudioProcessor::DelayAudioProcessor()
     mFeedbackLeft = 0;
     mFeedbackRight = 0;
     //All of these are initial values to reset the circular buffer before running.
-
     
     addParameter(mDryWetParameter = new juce::AudioParameterFloat({"drywet", 1}, "Dry Wet", 0, 1.0, 0.5));
     addParameter(mFeedbackParameter = new juce::AudioParameterFloat({"feedback", 1}, "Feedback", 0, 0.98, 0.5));
     addParameter(mDelayTimeParameter = new juce::AudioParameterFloat({"delaytime", 1}, "Delay Time", 0.01, MAX_DELAY_TIME, 0.5));
     //parameters for our new pointers.
+
     
 }
 
@@ -53,6 +54,7 @@ DelayAudioProcessor::~DelayAudioProcessor()
             delete [] mCircularBufferRight;
             mCircularBufferRight = nullptr;
         }
+    
 }
 
 //==============================================================================
