@@ -67,5 +67,7 @@ private:
     
     float mFeedbackLeft;
     float mFeedbackRight;
-    //left and right feedback scalars. 
+    //left and right feedback scalars.
+    
+    float mDryWet;
 };

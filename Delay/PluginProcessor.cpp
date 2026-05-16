@@ -31,6 +31,8 @@ DelayAudioProcessor::DelayAudioProcessor()
     mFeedbackLeft = 0;
     mFeedbackRight = 0;
     //All of these are initial values to reset the circular buffer before running.
+    mDryWet = 0.5;
+    //This sets the amount of unprocessed to processsed signal as equal as default
 }
 
 
@@ -199,10 +201,11 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
             mFeedbackRight = delay_sample_right * 0.8;
             //This turns down the delayed sample before storing. (Make the scalar bigger or smaller to turn it up or down)
             
-            buffer.addSample(0, i, delay_sample_left);
-            buffer.addSample(1, i, delay_sample_right);
-//This section of code allows us to use different samples for the delay and buffer.
-//This way we don't have to use the same for both.
+            buffer.setSample(0, i, buffer.getSample(0, i) * (1 - mDryWet) + delay_sample_left * mDryWet);
+            buffer.setSample(1, i, buffer.getSample(1, i) * (1 - mDryWet) + delay_sample_right * mDryWet);
+            
+//This section of code now allows us to control the amout of buffer sample involved. For example if mDrtWet if set to 1, you get 100% processed sound. (1-1) = 0.
+            
         }
     
    
