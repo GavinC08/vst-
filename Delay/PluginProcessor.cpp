@@ -10,7 +10,7 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-DelayPlug_inAudioProcessor::DelayPlug_inAudioProcessor()
+DelayAudioProcessor::DelayAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
                      #if ! JucePlugin_IsMidiEffect
@@ -28,11 +28,14 @@ DelayPlug_inAudioProcessor::DelayPlug_inAudioProcessor()
     mCircularBufferLength = 0;
     mDelayTimeInSamples = 0;
     mCircularBufferReadHead = 0;
+    mFeedbackLeft = 0;
+    mFeedbackRight = 0;
+    //All of these are initial values to reset the circular buffer before running.
 }
 
 
 
-DelayPlug_inAudioProcessor::~DelayPlug_inAudioProcessor()
+DelayAudioProcessor::~DelayAudioProcessor()
 {
         if (mCircularBufferLeft != nullptr) {
             delete [] mCircularBufferLeft;
@@ -46,12 +49,12 @@ DelayPlug_inAudioProcessor::~DelayPlug_inAudioProcessor()
 }
 
 //==============================================================================
-const juce::String DelayPlug_inAudioProcessor::getName() const
+const juce::String DelayAudioProcessor::getName() const
 {
     return JucePlugin_Name;
 }
 
-bool DelayPlug_inAudioProcessor::acceptsMidi() const
+bool DelayAudioProcessor::acceptsMidi() const
 {
    #if JucePlugin_WantsMidiInput
     return true;
@@ -60,7 +63,7 @@ bool DelayPlug_inAudioProcessor::acceptsMidi() const
    #endif
 }
 
-bool DelayPlug_inAudioProcessor::producesMidi() const
+bool DelayAudioProcessor::producesMidi() const
 {
    #if JucePlugin_ProducesMidiOutput
     return true;
@@ -69,7 +72,7 @@ bool DelayPlug_inAudioProcessor::producesMidi() const
    #endif
 }
 
-bool DelayPlug_inAudioProcessor::isMidiEffect() const
+bool DelayAudioProcessor::isMidiEffect() const
 {
    #if JucePlugin_IsMidiEffect
     return true;
@@ -78,37 +81,37 @@ bool DelayPlug_inAudioProcessor::isMidiEffect() const
    #endif
 }
 
-double DelayPlug_inAudioProcessor::getTailLengthSeconds() const
+double DelayAudioProcessor::getTailLengthSeconds() const
 {
     return 0.0;
 }
 
-int DelayPlug_inAudioProcessor::getNumPrograms()
+int DelayAudioProcessor::getNumPrograms()
 {
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
                 // so this should be at least 1, even if you're not really implementing programs.
 }
 
-int DelayPlug_inAudioProcessor::getCurrentProgram()
+int DelayAudioProcessor::getCurrentProgram()
 {
     return 0;
 }
 
-void DelayPlug_inAudioProcessor::setCurrentProgram (int index)
+void DelayAudioProcessor::setCurrentProgram (int index)
 {
 }
 
-const juce::String DelayPlug_inAudioProcessor::getProgramName (int index)
+const juce::String DelayAudioProcessor::getProgramName (int index)
 {
     return {};
 }
 
-void DelayPlug_inAudioProcessor::changeProgramName (int index, const juce::String& newName)
+void DelayAudioProcessor::changeProgramName (int index, const juce::String& newName)
 {
 }
 
 //==============================================================================
-void DelayPlug_inAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
@@ -126,14 +129,14 @@ void DelayPlug_inAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     }
 
 
-void DelayPlug_inAudioProcessor::releaseResources()
+void DelayAudioProcessor::releaseResources()
 {
     // When playback stops, you can use this as an opportunity to free up any
     // spare memory, etc.
 }
 
 #ifndef JucePlugin_PreferredChannelConfigurations
-bool DelayPlug_inAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool DelayAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
   #if JucePlugin_IsMidiEffect
     juce::ignoreUnused (layouts);
@@ -158,7 +161,7 @@ bool DelayPlug_inAudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 }
 #endif
 
-void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
+void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
 
     juce::ScopedNoDenormals noDenormals;
@@ -172,8 +175,9 @@ void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     float* rightChannel = buffer.getWritePointer(1);
 
         for (int i = 0; i < buffer.getNumSamples(); i++) {
-            mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
-            mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i];
+            mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i] + mFeedbackLeft;
+            mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i] + mFeedbackRight;
+// + mFeedbackLeft and + mFeedbackRight add the feedback values directly to the circular buffer
             
             mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
             
@@ -188,9 +192,17 @@ void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                         mCircularBufferReadHead += mCircularBufferLength;
                     }
             
-            buffer.addSample(0, i, mCircularBufferLeft[(int)mCircularBufferReadHead]);
-                    buffer.addSample(1, i, mCircularBufferRight[(int)mCircularBufferReadHead]);
+            float delay_sample_left = mCircularBufferLeft[(int)mCircularBufferReadHead];
+            float delay_sample_right = mCircularBufferRight[(int)mCircularBufferReadHead];
 
+            mFeedbackLeft = delay_sample_left * 0.8;
+            mFeedbackRight = delay_sample_right * 0.8;
+            //This turns down the delayed sample before storing. (Make the scalar bigger or smaller to turn it up or down)
+            
+            buffer.addSample(0, i, delay_sample_left);
+            buffer.addSample(1, i, delay_sample_right);
+//This section of code allows us to use different samples for the delay and buffer.
+//This way we don't have to use the same for both.
         }
     
    
@@ -218,25 +230,25 @@ void DelayPlug_inAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 }
 
 //==============================================================================
-bool DelayPlug_inAudioProcessor::hasEditor() const
+bool DelayAudioProcessor::hasEditor() const
 {
     return true; // (change this to false if you choose to not supply an editor)
 }
 
-juce::AudioProcessorEditor* DelayPlug_inAudioProcessor::createEditor()
+juce::AudioProcessorEditor* DelayAudioProcessor::createEditor()
 {
-    return new DelayPlug_inAudioProcessorEditor (*this);
+    return new DelayAudioProcessorEditor (*this);
 }
 
 //==============================================================================
-void DelayPlug_inAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+void DelayAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
 }
 
-void DelayPlug_inAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+void DelayAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
@@ -246,5 +258,5 @@ void DelayPlug_inAudioProcessor::setStateInformation (const void* data, int size
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new DelayPlug_inAudioProcessor();
+    return new DelayAudioProcessor();
 }

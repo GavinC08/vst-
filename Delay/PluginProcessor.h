@@ -15,12 +15,12 @@
 //==============================================================================
 /**
 */
-class DelayPlug_inAudioProcessor  : public juce::AudioProcessor
+class DelayAudioProcessor  : public juce::AudioProcessor
 {
 public:
     //==============================================================================
-    DelayPlug_inAudioProcessor();
-    ~DelayPlug_inAudioProcessor() override;
+    DelayAudioProcessor();
+    ~DelayAudioProcessor() override;
 
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
@@ -57,11 +57,15 @@ public:
 
 private:
     //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayPlug_inAudioProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessor)
     float* mCircularBufferLeft;
     float* mCircularBufferRight;
     int mCircularBufferWriteHead;
     int mCircularBufferLength;
     float mDelayTimeInSamples;
     float mCircularBufferReadHead;
+    
+    float mFeedbackLeft;
+    float mFeedbackRight;
+    //left and right feedback scalars. 
 };
